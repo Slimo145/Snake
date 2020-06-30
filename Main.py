@@ -29,7 +29,7 @@ class Game:
         for i in range (1, len(self.player.tiles)):
             if self.player.tiles[0] == self.player.tiles[i]:
                 self.playing = False
-                self.show_menu()
+                self.show_menu() 
 
         #check collision with wall
         if self.player.rect.left < 0 \
