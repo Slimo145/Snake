@@ -1,23 +1,22 @@
 #game settings
 HEIGHT = 600
 WIDTH = 600
+PLAYER_SIZE = 25
 TITLE = "Snake"
 FONT_NAME = 'arial'
 FPS = 60
-MOVING_TIME = 150
-
-#player properties
-PLAYER_SIZE = 25
+MOVING_TIME = 100000
+SPEED = PLAYER_SIZE / MOVING_TIME * 1000
 
 #game properties
 BIG_FR_SPAWN_PCT = 10
 BIG_FR_TIME = 10000
 
 #staring snake
-HEAD_COORD = (150, 150)
-BODY_COORD = [(150, 125),
-             (150, 100),
-             (150, 75)]
+HEAD_COORD = (50, 75)
+BODY_COORD = [(50, 100),
+             (50, 125),
+             (50, 150)]
 
 #COLORS
 WHITE = (255, 255, 255)

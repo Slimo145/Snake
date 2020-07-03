@@ -23,22 +23,22 @@ class Game:
 
     def update(self):
         #update game loop
+        self.player.update()
         self.all_sprites.update()
 
         #check self collision
-        for i in range (1, len(self.player.tiles)):
-            if self.player.tiles[0] == self.player.tiles[i]:
-                self.playing = False
-                self.show_menu() 
+
 
         #check collision with wall
-        if self.player.rect.left < 0 \
-        or self.player.rect.right > WIDTH \
-        or self.player.rect.top < 0 \
-        or self.player.rect.bottom > HEIGHT:
+        head = self.player.tiles[0][0]
+        if head.rect.left < 0 \
+        or head.rect.right > WIDTH \
+        or head.rect.top < 0 \
+        or head.rect.bottom > HEIGHT:
             self.playing = False
             self.show_menu()
 
+        '''
         #check collision with fruit
         hits = pg.sprite.spritecollide(self.player, self.fruits, True)
         if hits:
@@ -49,17 +49,10 @@ class Game:
                 elif hit.type == "big":
                     self.score += 4
             Fruit(self)
+        '''
 
         #grow Snake, when there is space to grow
-        skip = False
-        while self.new_bodies > 0 and not skip:
-            x = self.player.tiles[len(self.player.tiles) - 1][0] * 2 - self.player.tiles[len(self.player.tiles) - 2][0]
-            y = self.player.tiles[len(self.player.tiles) - 1][1] * 2 - self.player.tiles[len(self.player.tiles) - 2][1]
-            if x >= 0 and x <= WIDTH - PLAYER_SIZE and y >= 0 and y <= HEIGHT - PLAYER_SIZE:
-                Body(self, x, y)
-                self.new_bodies -= 1
-            else:
-                skip = True
+
 
     def events(self):
         #events game loop
@@ -73,13 +66,19 @@ class Game:
                 or event.key == pg.K_DOWN \
                 or event.key == pg.K_LEFT \
                 or event.key == pg.K_RIGHT:
-                    self.player.turn(event.key)
+                    self.player.check_turn(event.key)
                     #273-U; 274-D; 275-R; 276-L
 
     def draw(self):
         self.screen.fill(BGCOLOR)
         self.all_sprites.draw(self.screen)
         self.draw_text('Score: ' + str(self.score), 22, WHITE, 40, 5)
+
+        #draw grid
+        for i in range(1, WIDTH // PLAYER_SIZE):
+            pg.draw.line(self.screen, RED, (PLAYER_SIZE * i, 0), (PLAYER_SIZE * i, HEIGHT))
+        for j in range(1, HEIGHT // PLAYER_SIZE):
+            pg.draw.line(self.screen, RED, (0, PLAYER_SIZE * j), (WIDTH, PLAYER_SIZE * j))
 
         pg.display.flip()
 
@@ -89,10 +88,12 @@ class Game:
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.bodies = pg.sprite.Group()
         self.fruits = pg.sprite.Group()
-        self.player = Head(self, *HEAD_COORD)
+        self.player = Player(self)
+        Body(self, *HEAD_COORD, "head", vec(0, -1) * SPEED)
         for body in BODY_COORD:
             Body(self, *body)
-        Fruit(self)
+        #Fruit(self)
+        self.player.print_tiles()
         self.run()
 
     def show_menu(self):
