@@ -89,9 +89,9 @@ class Game:
         self.bodies = pg.sprite.Group()
         self.fruits = pg.sprite.Group()
         self.player = Player(self)
-        Body(self, *HEAD_COORD, "head", vec(0, -1) * SPEED)
+        self.player.tiles.append([Body(self, *HEAD_COORD, "head", vec(0, -1) * SPEED)])
         for body in BODY_COORD:
-            Body(self, *body)
+            self.player.tiles[0].append(Body(self, *body))
         #Fruit(self)
         self.player.print_tiles()
         self.run()

@@ -2,7 +2,7 @@ from Settings import *
 import pygame as pg
 import random
 from copy import deepcopy
-from math import ceil
+from math import ceil, sqrt
 
 
 vec = pg.math.Vector2
@@ -14,7 +14,7 @@ class Player(pg.sprite.Sprite):
         self.game = game
         self.last_update = 0
         self.changed_dir = False
-        self.tiles = [[]]
+        self.tiles = []
         self.next_tile = (-1, -1) #x, y, coordinates of the tile to turn to
 
     def update(self):
@@ -35,7 +35,8 @@ class Player(pg.sprite.Sprite):
                self.tiles[i].append(self.tiles[i+1].pop(1))
 
         #delete last link if empty
-        if self.tiles[len(self.tiles) - 1] == []:
+        if len(self.tiles[len(self.tiles) - 1]) == 1:
+            self.tiles[len(self.tiles) - 1][0].kill()
             self.tiles.pop()
 
         #turn if needed and in the center of the tile:
@@ -63,29 +64,29 @@ class Player(pg.sprite.Sprite):
         #don't turn if it's only head and it's not far enough
         if (len(self.tiles[0]) != 1) or \
            (len(self.tiles) >= 1 and sqrt((selt.tiles[0][0].rect.centerx - self.tiles[1][0].rect.centerx) ^ 2 + (selt.tiles[0][0].rect.centery - self.tiles[1][0].rect.centery) ^ 2) > PLAYER_SIZE * 0.25):
-            if self.tiles[0][0].dir == "U" and (key == 275 or key == 276):
+            if self.tiles[0][0].dir == "U" and (key == pg.K_RIGHT or key == pg.K_LEFT):
                 j = ceil((self.tiles[0][0].rect.top + 0.25 * PLAYER_SIZE) / PLAYER_SIZE)
-                if key == 275:
+                if key == pg.K_RIGHT:
                     i = ceil(self.tiles[0][0].rect.right / PLAYER_SIZE) + 1
-                if key == 276:
+                if key == pg.K_LEFT:
                     i = ceil(self.tiles[0][0].rect.right / PLAYER_SIZE) - 1
-            if self.tiles[0][0].dir == "D" and (key == 275 or key == 276):
+            if self.tiles[0][0].dir == "D" and (key == pg.K_RIGHT or key == pg.K_LEFT):
                 j = ceil((self.tiles[0][0].rect.bottom - 0.25 * PLAYER_SIZE) / PLAYER_SIZE)
-                if key == 275:
+                if key == pg.K_RIGHT:
                     i = ceil(self.tiles[0][0].rect.right / PLAYER_SIZE) + 1
-                if key == 276:
+                if key == pg.K_LEFT:
                     i = ceil(self.tiles[0][0].rect.right / PLAYER_SIZE) - 1
-            if self.tiles[0][0].dir == "R" and (key == 273 or key == 274):
+            if self.tiles[0][0].dir == "R" and (key == pg.K_UP or key == pg.K_DOWN):
                 i = ceil((self.tiles[0][0].rect.right - 0.25 * PLAYER_SIZE) / PLAYER_SIZE)
-                if key == 273:
+                if key == pg.K_UP:
                     j = ceil(self.tiles[0][0].rect.bottom / PLAYER_SIZE) - 1
-                if key == 274:
+                if key == pg.K_DOWN:
                     j = ceil(self.tiles[0][0].rect.bottom / PLAYER_SIZE) + 1
-            if self.tiles[0][0].dir == "L" and (key == 273 or key == 274):
+            if self.tiles[0][0].dir == "L" and (key == pg.K_UP or key == pg.K_DOWN):
                 i = ceil((self.tiles[0][0].rect.left + 0.25 * PLAYER_SIZE) / PLAYER_SIZE)
-                if key == 273:
+                if key == pg.K_UP:
                     j = ceil(self.tiles[0][0].rect.bottom / PLAYER_SIZE) - 1
-                if key == 274:
+                if key == pg.K_DOWN:
                     j = ceil(self.tiles[0][0].rect.bottom / PLAYER_SIZE) + 1
         self.next_tile = (i * PLAYER_SIZE - PLAYER_SIZE / 2, j * PLAYER_SIZE - PLAYER_SIZE / 2)
 
@@ -122,10 +123,6 @@ class Body(pg.sprite.Sprite):
         self.rect.top = y
         self.number = len(self.game.player.tiles)
         self.vel = vel
-        if self.type == "standard" or self.game.player.tiles == [[]]:
-            self.game.player.tiles[len(self.game.player.tiles) - 1].append(self)
-        else:
-            self.game.player.tiles.append([self])
 
     def update(self):
         if self.type == "head":
