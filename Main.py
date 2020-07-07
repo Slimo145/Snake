@@ -1,6 +1,8 @@
 import pygame as pg
 from Settings import *
 from Sprites import *
+from math import sqrt
+from random import randint
 
 class Game:
     def __init__(self):
@@ -27,10 +29,18 @@ class Game:
         self.all_sprites.update()
 
         #check self collision
-
+        i = 5
+        #can hit only third tile [h, s, c, s, c, s, s...]
+        while i < len(self.player.tiles) and self.playing:
+            if sqrt((self.player.tiles[0].rect.left - self.player.tiles[i].rect.left) ** 2 +
+                    (self.player.tiles[0].rect.top - self.player.tiles[i].rect.top) ** 2) < PLAYER_SIZE:
+                self.playing = False
+                self.show_menu()
+            else:
+                i += 1
 
         #check collision with wall
-        head = self.player.tiles[0][0]
+        head = self.player.tiles[0]
         if head.rect.left < 0 \
         or head.rect.right > WIDTH \
         or head.rect.top < 0 \
@@ -38,36 +48,38 @@ class Game:
             self.playing = False
             self.show_menu()
 
-        '''
         #check collision with fruit
-        hits = pg.sprite.spritecollide(self.player, self.fruits, True)
+        hits = pg.sprite.spritecollide(self.player.tiles[0], self.fruits, True)
         if hits:
             for hit in hits:
                 self.new_bodies += 1
-                if hit.type == "normal":
+                if hit.type == "standard":
                     self.score += 1
+                    Fruit(self, "standard")
                 elif hit.type == "big":
                     self.score += 4
-            Fruit(self)
-        '''
+                    self.big_fruit_exist = False
+
+        #spawn big fruit
+        if not self.big_fruit_exist:
+            create = randint(1, BIG_FR_SPAWN_PCT)
+            if create == 1:
+                Fruit(self, "big")
+                self.big_fruit_exist = True
 
         #grow Snake, when there is space to grow
 
 
     def events(self):
         #events game loop
+        turn_keys = [pg.K_UP, pg.K_DOWN, pg.K_RIGHT, pg.K_LEFT]
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 if self.playing:
                     self.playing = False
                 self.quitgame()
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_UP \
-                or event.key == pg.K_DOWN \
-                or event.key == pg.K_LEFT \
-                or event.key == pg.K_RIGHT:
-                    self.player.check_turn(event.key)
-                    #273-U; 274-D; 275-R; 276-L
+            if event.type == pg.KEYDOWN and event.key in turn_keys:
+                self.player.select_next_tile(event.key)
 
     def draw(self):
         self.screen.fill(BGCOLOR)
@@ -85,15 +97,15 @@ class Game:
     def new(self):
         self.score = 0
         self.new_bodies = 0
+        self.big_fruit_exist = False
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.bodies = pg.sprite.Group()
         self.fruits = pg.sprite.Group()
         self.player = Player(self)
-        self.player.tiles.append([Body(self, *HEAD_COORD, "head", vec(0, -1) * SPEED)])
+        self.player.tiles.append(Body(self, *HEAD_COORD, "head"))#, vec(0, -1) * SPEED)])
         for body in BODY_COORD:
-            self.player.tiles[0].append(Body(self, *body))
-        #Fruit(self)
-        self.player.print_tiles()
+            self.player.tiles.append(Body(self, *body))
+        Fruit(self, "standard")
         self.run()
 
     def show_menu(self):
@@ -147,6 +159,7 @@ class Game:
         else:
             pg.draw.rect(self.screen, ic, (x - w/2, y, w, h))
             self.draw_text(text, size, tic, x, y)
+
 
 g = Game()
 g.show_menu()

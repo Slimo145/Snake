@@ -1,6 +1,6 @@
 from Settings import *
 import pygame as pg
-import random
+from random import choice
 from copy import deepcopy
 from math import ceil, sqrt
 
@@ -15,98 +15,64 @@ class Player(pg.sprite.Sprite):
         self.last_update = 0
         self.changed_dir = False
         self.tiles = []
-        self.next_tile = (-1, -1) #x, y, coordinates of the tile to turn to
+        self.cur_tile = INIT_DIRECTION
+        self.next_tile = INIT_DIRECTION #x, y, top,left coordinates of the tile to turn to
+        self.cur_dir = vec(0, -1)
+        self.next_dir = vec(0, -1)
 
     def update(self):
-        head = self.tiles[0][0]
-
         #move every tile
-        for link in self.tiles:
-            for i in range(1, len(link)):
-                link[i].rect.center += link[0].vel
-        head.rect.center += head.vel
+        for i in range(len(self.tiles)):
+            tile = self.tiles[i]
+            if tile.type == "standard":
+                dist = self.distance((self.tiles[i-1].rect.left, self.tiles[i-1].rect.top), (tile.rect.left, tile.rect.top))
+                tile.rect.left += SPEED * (self.tiles[i-1].rect.left - tile.rect.left) / dist
+                tile.rect.top += SPEED * (self.tiles[i-1].rect.top - tile.rect.top) / dist
+        self.tiles[0].rect.center += SPEED * self.cur_dir
 
-        #if at the center move bodies to the next link
-        if abs((head.rect.top // PLAYER_SIZE) * PLAYER_SIZE - head.rect.top) < SPEED and \
-           abs((head.rect.left // PLAYER_SIZE) * PLAYER_SIZE - head.rect.left) < SPEED:
-           print("move")
-           self.print_tiles()
-           for i in range(len(self.tiles) - 1):
-               self.tiles[i].append(self.tiles[i+1].pop(1))
+        head = self.tiles[0]
+        #check if at the center of the tile
+        if abs(head.rect.left // PLAYER_SIZE - head.rect.left / PLAYER_SIZE) < SPEED / PLAYER_SIZE / 2 \
+        and abs(head.rect.top // PLAYER_SIZE - head.rect.top / PLAYER_SIZE) < SPEED / PLAYER_SIZE / 2:
+            i = 0
+            while i < len(self.tiles):
+                #move tile to the next link
+                if self.tiles[i].type == "corner":
+                    self.tiles[i], self.tiles[i+1] = self.tiles[i+1], self.tiles[i]
+                    i += 1
+                i += 1
+            #add corner
+            if self.cur_dir != self.next_dir:
+                self.tiles.insert(1, Body(self.game, head.rect.left, head.rect.top, "corner"))
+            self.cur_dir = self.next_dir
 
-        #delete last link if empty
-        if len(self.tiles[len(self.tiles) - 1]) == 1:
-            self.tiles[len(self.tiles) - 1][0].kill()
+        #if last link is empty, delete corner
+        if self.tiles[-1:][0].type == "corner":
+            self.tiles[-1:][0].kill()
             self.tiles.pop()
 
-        #turn if needed and in the center of the tile:
-        if self.next_tile != (-1, -1):
-            if (head.dir == "U" and head.rect.centery >= self.next_tile[1]) \
-            or (head.dir == "D" and head.rect.centery <= self.next_tile[1]) \
-            or (head.dir == "R" and head.rect.centerx >= self.next_tile[0]) \
-            or (head.dir == "L" and head.rect.centerx <= self.next_tile[0]):
-                print("turn")
-                self.print_tiles()
-                self.center_tiles()
-                new_head = Body(self.game, head.rect.left, head.rect.top, "head", (0,0))
-                self.tiles.insert(0, [new_head])
-                self.tiles[0][0].vel = vec((self.next_tile[0] - head.rect.centerx) // PLAYER_SIZE, \
-                                           (self.next_tile[1] - head.rect.centery) // PLAYER_SIZE)
-                self.tiles[1][0].type = "point"
-                self.next_tile = (-1, -1)
-                self.print_tiles()
 
-    def check_turn(self, key):
-        #keys: 273-U; 274-D; 275-R; 276-L
-        i = -1
-        j = -1
-        print(self.tiles[0][0].rect.left, self.tiles[0][0].rect.top)
-        #don't turn if it's only head and it's not far enough
-        if (len(self.tiles[0]) != 1) or \
-           (len(self.tiles) >= 1 and sqrt((selt.tiles[0][0].rect.centerx - self.tiles[1][0].rect.centerx) ^ 2 + (selt.tiles[0][0].rect.centery - self.tiles[1][0].rect.centery) ^ 2) > PLAYER_SIZE * 0.25):
-            if self.tiles[0][0].dir == "U" and (key == pg.K_RIGHT or key == pg.K_LEFT):
-                j = ceil((self.tiles[0][0].rect.top + 0.25 * PLAYER_SIZE) / PLAYER_SIZE)
-                if key == pg.K_RIGHT:
-                    i = ceil(self.tiles[0][0].rect.right / PLAYER_SIZE) + 1
-                if key == pg.K_LEFT:
-                    i = ceil(self.tiles[0][0].rect.right / PLAYER_SIZE) - 1
-            if self.tiles[0][0].dir == "D" and (key == pg.K_RIGHT or key == pg.K_LEFT):
-                j = ceil((self.tiles[0][0].rect.bottom - 0.25 * PLAYER_SIZE) / PLAYER_SIZE)
-                if key == pg.K_RIGHT:
-                    i = ceil(self.tiles[0][0].rect.right / PLAYER_SIZE) + 1
-                if key == pg.K_LEFT:
-                    i = ceil(self.tiles[0][0].rect.right / PLAYER_SIZE) - 1
-            if self.tiles[0][0].dir == "R" and (key == pg.K_UP or key == pg.K_DOWN):
-                i = ceil((self.tiles[0][0].rect.right - 0.25 * PLAYER_SIZE) / PLAYER_SIZE)
-                if key == pg.K_UP:
-                    j = ceil(self.tiles[0][0].rect.bottom / PLAYER_SIZE) - 1
-                if key == pg.K_DOWN:
-                    j = ceil(self.tiles[0][0].rect.bottom / PLAYER_SIZE) + 1
-            if self.tiles[0][0].dir == "L" and (key == pg.K_UP or key == pg.K_DOWN):
-                i = ceil((self.tiles[0][0].rect.left + 0.25 * PLAYER_SIZE) / PLAYER_SIZE)
-                if key == pg.K_UP:
-                    j = ceil(self.tiles[0][0].rect.bottom / PLAYER_SIZE) - 1
-                if key == pg.K_DOWN:
-                    j = ceil(self.tiles[0][0].rect.bottom / PLAYER_SIZE) + 1
-        self.next_tile = (i * PLAYER_SIZE - PLAYER_SIZE / 2, j * PLAYER_SIZE - PLAYER_SIZE / 2)
+    def select_next_tile(self, key):
+        turn_keys = [pg.K_UP, pg.K_DOWN, pg.K_RIGHT, pg.K_LEFT]
+        directions = [(0, -1), (0, 1), (1, 0), (-1, 0)]
+        for i in range(len(turn_keys)):
+            if key == turn_keys[i] and self.cur_dir * -1 != vec(directions[i]):
+                self.next_dir = vec(directions[i])
 
-    def center_tiles(self):
-        #align every tile with grid
-        for link in self.tiles:
-            for tile in link:
-                tile.rect.left = ceil(tile.rect.left // PLAYER_SIZE) * PLAYER_SIZE
-                tile.rect.top = ceil(tile.rect.top // PLAYER_SIZE) * PLAYER_SIZE
+
+    def distance(self, a, b):  #a, b - tuples
+        return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
+
 
     def print_tiles(self):
-        for link in self.tiles:
-            a = []
-            for tile in link:
-                a.append([tile.rect.left, tile.rect.top, tile.type])
-            print(a)
+        a = []
+        for tile in self.tiles:
+            a += [tile.rect.left, tile.rect.top, tile.type]
+        print(a)
 
 class Body(pg.sprite.Sprite):
 
-    def __init__(self, game, x, y, type = "standard", vel = vec(0, 0)):
+    def __init__(self, game, x, y, type = "standard"):#, vel = vec(0, 0)):
         self.groups = game.all_sprites, game.bodies
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -114,48 +80,36 @@ class Body(pg.sprite.Sprite):
         self.image = pg.Surface((PLAYER_SIZE, PLAYER_SIZE))
         if self.type == "head":
             self.image.fill(RED)
-        elif self.type == "point":
+        elif self.type == "corner":
             self.image.fill(BLUE)
         else:
             self.image.fill(GREEN)
         self.rect = self.image.get_rect()
         self.rect.left = x
         self.rect.top = y
-        self.number = len(self.game.player.tiles)
-        self.vel = vel
+        #self.number = len(self.game.player.tiles)
+        #self.vel = vel
 
     def update(self):
         if self.type == "head":
             self.image.fill(RED)
-        elif self.type == "point":
+        elif self.type == "corner":
             self.image.fill(BLUE)
         else:
             self.image.fill(GREEN)
 
-        if self.type == "head":
-            if self.vel[0] == 0 and self.vel[1] > 0:
-                self.dir = "D"
-            elif self.vel[0] == 0 and self.vel[1] < 0:
-                self.dir = "U"
-            elif self.vel[0] > 0 and self.vel[1] == 0:
-                self.dir = "R"
-            elif self.vel[0] < 0 and self.vel[1] == 0:
-                self.dir = "L"
-
 class Fruit(pg.sprite.Sprite):
 
-    def __init__(self, game):
+    def __init__(self, game, type):
         self.groups = game.all_sprites, game.fruits
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.create_time = pg.time.get_ticks()
-        type = random.randint(1, BIG_FR_SPAWN_PCT)
-        if type == 1:
-            self.type = "big"
+        self.type = type
+        if self.type == "big":
             self.image = pg.Surface((2 * PLAYER_SIZE, 2 * PLAYER_SIZE))
             self.image.fill(YELLOW)
         else:
-            self.type = "normal"
             self.image = pg.Surface((PLAYER_SIZE, PLAYER_SIZE))
             self.image.fill(YELLOW)
         self.rect = self.image.get_rect()
@@ -166,28 +120,24 @@ class Fruit(pg.sprite.Sprite):
         for i in range (0, WIDTH, PLAYER_SIZE):
             for j in range (0, HEIGHT, PLAYER_SIZE):
                 board.append([i, j])
-        if type == "normal":
-            for body_tile in tiles:
-                try:
-                    board.remove([body_tile[0], body_tile[1]])
-                except:
-                    print(board)
-                    print(body_tile)
-                    print(tiles)
-        elif type == "big":
-            for body_tile in tiles:
-                try:
-                    board.remove([body_tile[0], body_tile[1]])
-                    board.remove([body_tile[0] - PLAYER_SIZE, body_tile[1]])
-                    board.remove([body_tile[0], body_tile[1] - PLAYER_SIZE])
-                    board.remove([body_tile[0] - PLAYER_SIZE, body_tile[1] - PLAYER_SIZE])
 
-                except:
-                    pass
-        fruit_tile = random.choice(board)
+        big_fruit_tiles = [(0, 0), (0, -PLAYER_SIZE), (-PLAYER_SIZE, 0), (-PLAYER_SIZE, -PLAYER_SIZE)]
+        for body_tile in tiles:
+            x = body_tile.rect.left // PLAYER_SIZE * PLAYER_SIZE
+            y = body_tile.rect.top // PLAYER_SIZE * PLAYER_SIZE
+            if type == "standard":
+                if [x, y] in board:
+                    board.remove([x, y])
+            if type == "big":
+                for t in big_fruit_tiles:
+                    if [x + t[0], y + t[1]] in board:
+                        board.remove([x + t[0], y + t[1]])
+
+        fruit_tile = choice(board)
         return (fruit_tile[0], fruit_tile[1])
 
     def update(self):
         if self.type == "big" and \
            pg.time.get_ticks() - self.create_time > BIG_FR_TIME:
+            self.game.big_fruit_exist = False
             self.kill()
