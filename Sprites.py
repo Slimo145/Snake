@@ -17,7 +17,6 @@ class Player(pg.sprite.Sprite):
         self.tiles = []
         self.cur_tile = INIT_DIRECTION
         self.next_tile = INIT_DIRECTION #x, y, top,left coordinates of the tile to turn to
-        self.cur_dir = vec(0, -1)
         self.next_dir = vec(0, -1)
 
     def update(self):
@@ -25,38 +24,59 @@ class Player(pg.sprite.Sprite):
         for i in range(len(self.tiles)):
             tile = self.tiles[i]
             if tile.type == "standard":
+                tile.rect.center += SPEED * tile.dir
+                """
                 dist = self.distance((self.tiles[i-1].rect.left, self.tiles[i-1].rect.top), (tile.rect.left, tile.rect.top))
                 tile.rect.left += SPEED * (self.tiles[i-1].rect.left - tile.rect.left) / dist
                 tile.rect.top += SPEED * (self.tiles[i-1].rect.top - tile.rect.top) / dist
-        self.tiles[0].rect.center += SPEED * self.cur_dir
+                """
+        self.tiles[0].rect.center += SPEED * self.tiles[0].dir
 
         head = self.tiles[0]
         #check if at the center of the tile
         if abs(head.rect.left // PLAYER_SIZE - head.rect.left / PLAYER_SIZE) < SPEED / PLAYER_SIZE / 2 \
         and abs(head.rect.top // PLAYER_SIZE - head.rect.top / PLAYER_SIZE) < SPEED / PLAYER_SIZE / 2:
-            i = 0
-            while i < len(self.tiles):
+        #if self.check_if_center(head):
+            self.center_tiles()
+            #start at the end, because otherwise getting wrong direction if two consequent turns
+            i = len(self.tiles) - 1
+            while i > 0:
                 #move tile to the next link
                 if self.tiles[i].type == "corner":
                     self.tiles[i], self.tiles[i+1] = self.tiles[i+1], self.tiles[i]
-                    i += 1
-                i += 1
+                    self.tiles[i].dir = self.tiles[i-1].dir
+                    i -= 1
+                i -= 1
             #add corner
-            if self.cur_dir != self.next_dir:
-                self.tiles.insert(1, Body(self.game, head.rect.left, head.rect.top, "corner"))
-            self.cur_dir = self.next_dir
+            if head.dir != self.next_dir:
+                self.tiles.insert(1, Body(self.game, head.rect.left, head.rect.top, "corner", self.next_dir))
+            head.dir = self.next_dir
 
         #if last link is empty, delete corner
         if self.tiles[-1:][0].type == "corner":
             self.tiles[-1:][0].kill()
             self.tiles.pop()
 
+    def check_if_center(self, head):
+        left = head.rect.left // PLAYER_SIZE * PLAYER_SIZE
+        top = head.rect.top // PLAYER_SIZE * PLAYER_SIZE
+        h_left = head.rect.left
+        h_top = head.rect.top
+        answer = True
+        if h_left - left > SPEED or h_top - top > SPEED:
+            answer = False
+        else:
+            if (abs(left - h_left) < abs(left - h_left - 0.1 * head.dir[0])) or \
+               (abs(top - h_top) < abs(top - h_top - 0.1 * head.dir[1])):
+               answer = False
+        return answer
 
     def select_next_tile(self, key):
+        keys = ["Up", "Down", "Right", "Left"]
         turn_keys = [pg.K_UP, pg.K_DOWN, pg.K_RIGHT, pg.K_LEFT]
         directions = [(0, -1), (0, 1), (1, 0), (-1, 0)]
         for i in range(len(turn_keys)):
-            if key == turn_keys[i] and self.cur_dir * -1 != vec(directions[i]):
+            if key == turn_keys[i] and self.tiles[0].dir * -1 != vec(directions[i]):
                 self.next_dir = vec(directions[i])
 
 
@@ -64,15 +84,21 @@ class Player(pg.sprite.Sprite):
         return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
 
 
+    def center_tiles(self):
+        for tile in self.tiles:
+            tile.rect.left = tile.rect.left // PLAYER_SIZE * PLAYER_SIZE
+            tile.rect.top = tile.rect.top // PLAYER_SIZE * PLAYER_SIZE
+
+
     def print_tiles(self):
         a = []
         for tile in self.tiles:
-            a += [tile.rect.left, tile.rect.top, tile.type]
+            a += [[tile.rect.left, tile.rect.top, tile.type, tile.dir]]
         print(a)
 
 class Body(pg.sprite.Sprite):
 
-    def __init__(self, game, x, y, type = "standard"):#, vel = vec(0, 0)):
+    def __init__(self, game, x, y, type = "standard", dir = (0, 0)):#, vel = vec(0, 0)):
         self.groups = game.all_sprites, game.bodies
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -87,6 +113,7 @@ class Body(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.left = x
         self.rect.top = y
+        self.dir = vec(dir)
         #self.number = len(self.game.player.tiles)
         #self.vel = vel
 
