@@ -86,11 +86,13 @@ class Game:
         self.all_sprites.draw(self.screen)
         self.draw_text('Score: ' + str(self.score), 22, WHITE, 40, 5)
 
+        """
         #draw grid
         for i in range(1, WIDTH // PLAYER_SIZE):
             pg.draw.line(self.screen, RED, (PLAYER_SIZE * i, 0), (PLAYER_SIZE * i, HEIGHT))
         for j in range(1, HEIGHT // PLAYER_SIZE):
             pg.draw.line(self.screen, RED, (0, PLAYER_SIZE * j), (WIDTH, PLAYER_SIZE * j))
+        """
 
         pg.display.flip()
 

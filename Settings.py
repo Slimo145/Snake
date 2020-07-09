@@ -5,10 +5,10 @@ PLAYER_SIZE = 25
 TITLE = "Snake"
 FONT_NAME = 'arial'
 FPS = 60
-SPEED = 1
+SPEED = 2
 
 #game properties
-BIG_FR_SPAWN_PCT = 60
+BIG_FR_SPAWN_PCT = 150
 BIG_FR_TIME = 10000
 
 #staring snake

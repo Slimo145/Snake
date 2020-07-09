@@ -25,19 +25,14 @@ class Player(pg.sprite.Sprite):
             tile = self.tiles[i]
             if tile.type == "standard":
                 tile.rect.center += SPEED * tile.dir
-                """
-                dist = self.distance((self.tiles[i-1].rect.left, self.tiles[i-1].rect.top), (tile.rect.left, tile.rect.top))
-                tile.rect.left += SPEED * (self.tiles[i-1].rect.left - tile.rect.left) / dist
-                tile.rect.top += SPEED * (self.tiles[i-1].rect.top - tile.rect.top) / dist
-                """
         self.tiles[0].rect.center += SPEED * self.tiles[0].dir
 
         head = self.tiles[0]
         #check if at the center of the tile
-        if abs(head.rect.left // PLAYER_SIZE - head.rect.left / PLAYER_SIZE) < SPEED / PLAYER_SIZE / 2 \
-        and abs(head.rect.top // PLAYER_SIZE - head.rect.top / PLAYER_SIZE) < SPEED / PLAYER_SIZE / 2:
-        #if self.check_if_center(head):
-            self.center_tiles()
+        #if abs(head.rect.left // PLAYER_SIZE - head.rect.left / PLAYER_SIZE) < SPEED / PLAYER_SIZE / 2 \
+        #and abs(head.rect.top // PLAYER_SIZE - head.rect.top / PLAYER_SIZE) < SPEED / PLAYER_SIZE / 2:
+        if self.check_if_center(head):
+            self.align_tiles()
             #start at the end, because otherwise getting wrong direction if two consequent turns
             i = len(self.tiles) - 1
             while i > 0:
@@ -58,18 +53,14 @@ class Player(pg.sprite.Sprite):
             self.tiles.pop()
 
     def check_if_center(self, head):
-        left = head.rect.left // PLAYER_SIZE * PLAYER_SIZE
-        top = head.rect.top // PLAYER_SIZE * PLAYER_SIZE
-        h_left = head.rect.left
-        h_top = head.rect.top
-        answer = True
-        if h_left - left > SPEED or h_top - top > SPEED:
-            answer = False
-        else:
-            if (abs(left - h_left) < abs(left - h_left - 0.1 * head.dir[0])) or \
-               (abs(top - h_top) < abs(top - h_top - 0.1 * head.dir[1])):
-               answer = False
-        return answer
+        A = self.find_closest(head.rect.left, head.rect.top)
+        A_h = (head.rect.left, head.rect.top)
+        at_center = False
+        if self.distance(A, A_h) < SPEED:
+            if self.the_same(A, A_h) or \
+               self.distance(A, A_h) > self.distance(A, A_h + 0.1 * SPEED * head.dir):
+               at_center = True
+        return at_center
 
     def select_next_tile(self, key):
         keys = ["Up", "Down", "Right", "Left"]
@@ -79,15 +70,35 @@ class Player(pg.sprite.Sprite):
             if key == turn_keys[i] and self.tiles[0].dir * -1 != vec(directions[i]):
                 self.next_dir = vec(directions[i])
 
+    def the_same(self, a, b):
+        if self.distance(a, b) < 0.1:
+            return True
+        else:
+            return False
 
     def distance(self, a, b):  #a, b - tuples
         return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
 
+    #finds the closest corner to the point
+    def find_closest(self, x, y):
+        x0 = x // PLAYER_SIZE * PLAYER_SIZE
+        y0 = y // PLAYER_SIZE * PLAYER_SIZE
+        points = [(x0, y0), (x0 + PLAYER_SIZE, y0), (x0, y0 + PLAYER_SIZE), (x0 + PLAYER_SIZE, y0 + PLAYER_SIZE)]
+        min_d = 1000
+        point = (0, 0)
+        for p in points:
+            if self.distance((x, y), p) < min_d:
+                point = p
+                min_d = self.distance((x, y), p)
+        return point
 
-    def center_tiles(self):
+    #move snake, so it is aligned with the grid
+    def align_tiles(self):
+        disp = (0, 0)
         for tile in self.tiles:
-            tile.rect.left = tile.rect.left // PLAYER_SIZE * PLAYER_SIZE
-            tile.rect.top = tile.rect.top // PLAYER_SIZE * PLAYER_SIZE
+            p = self.find_closest(tile.rect.left, tile.rect.top)
+            tile.rect.left = p[0]
+            tile.rect.top = p[1]
 
 
     def print_tiles(self):
