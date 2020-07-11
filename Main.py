@@ -96,6 +96,19 @@ class Game:
                 Fruit(self, "big")
                 self.big_fruit_exist = True
 
+        #spawn obstacle
+        if OBSTACLE_NUMBER > len(self.list_obstacles):
+            self.list_obstacles.append([randint(MIN_OBSTACLE, MAX_OBSTACLE)])
+            self.list_obstacles[len(self.list_obstacles) - 1].append(Obstacle(self))
+            for i in range(self.list_obstacles[-1:][0][0] - 1):
+                self.list_obstacles[len(self.list_obstacles) - 1].append(Obstacle(self, False))
+
+        #check collision with obstacle
+        hits = pg.sprite.spritecollide(self.player.tiles[0], self.obstacles, False)
+        if hits:
+            self.playing = False
+            self.show_menu()
+
     #draw all sprites, score
     def draw(self):
         self.screen.fill(BGCOLOR)
@@ -103,15 +116,15 @@ class Game:
         self.draw_text('Score: ' + str(self.score), 22, WHITE, 40, 5)
         if self.player.last_food_type == "standard":
             pg.draw.rect(self.screen, RED, \
-                        (WIDTH / 2 - 100, 10, 200 * (self.player.starve_time - pg.time.get_ticks()) / TIME_TO_STARVE, 15))
+                        (WIDTH / 2 - 100, 5, 200 * (self.player.starve_time - pg.time.get_ticks()) / TIME_TO_STARVE, 15))
         elif self.player.last_food_type == "big":
             pg.draw.rect(self.screen, RED, \
-                        (WIDTH / 2 - 100, 10, 200 * (self.player.starve_time - pg.time.get_ticks()) / 2 / TIME_TO_STARVE, 15))
-        pg.draw.rect(self.screen, GREY, (WIDTH / 2 - 100, 10, 200, 15) , 1)
+                        (WIDTH / 2 - 100, 5, 200 * (self.player.starve_time - pg.time.get_ticks()) / 2 / TIME_TO_STARVE, 15))
+        pg.draw.rect(self.screen, GREY, (WIDTH / 2 - 100, 5, 200, 15) , 1)
         if self.big_fruit_exist:
             pg.draw.rect(self.screen, GREEN, \
-                         (WIDTH / 2 - 100, 35, 200 - 200 * (pg.time.get_ticks() - self.find_bf_time()) / BIG_FR_TIME, 15))
-            pg.draw.rect(self.screen, GREY, (WIDTH / 2 - 100, 35, 200, 15) , 1)
+                         (WIDTH / 2 - 100, 25, 200 - 200 * (pg.time.get_ticks() - self.find_bf_time()) / BIG_FR_TIME, 15))
+            pg.draw.rect(self.screen, GREY, (WIDTH / 2 - 100, 25, 200, 15) , 1)
 
         """
         #draw grid
@@ -131,6 +144,8 @@ class Game:
         self.big_fruit_exist = False
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.fruits = pg.sprite.Group()
+        self.obstacles = pg.sprite.Group()
+        self.list_obstacles = []
         self.player = Player(self)
         self.player.tiles.append(Body(self, *HEAD_COORD, (0, -1), "head"))
         for body in BODY_COORD:
