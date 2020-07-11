@@ -65,7 +65,7 @@ class Game:
         head = self.player.tiles[0]
         if head.rect.left < 0 \
         or head.rect.right > WIDTH \
-        or head.rect.top < OFFSET \
+        or head.rect.top < OFFSET_Y \
         or head.rect.bottom > HEIGHT:
             self.playing = False
             self.show_menu()
@@ -97,7 +97,7 @@ class Game:
                 self.big_fruit_exist = True
 
         #spawn obstacle
-        if OBSTACLE_NUMBER > len(self.list_obstacles):
+        while OBSTACLE_NUMBER > len(self.list_obstacles):
             self.list_obstacles.append([randint(MIN_OBSTACLE, MAX_OBSTACLE)])
             self.list_obstacles[len(self.list_obstacles) - 1].append(Obstacle(self))
             for i in range(self.list_obstacles[-1:][0][0] - 1):
@@ -113,7 +113,7 @@ class Game:
     def draw(self):
         self.screen.fill(BGCOLOR)
         self.all_sprites.draw(self.screen)
-        pg.draw.rect(self.screen, RAISIN_BLACK, (0, 0, WIDTH, OFFSET))
+        pg.draw.rect(self.screen, RAISIN_BLACK, (0, 0, WIDTH, OFFSET_Y))
         self.draw_text('Score: ' + str(self.score), 22, WHITE, 40, 5)
         if self.player.last_food_type == "standard":
             pg.draw.rect(self.screen, RED, \
@@ -139,11 +139,20 @@ class Game:
         self.fruits = pg.sprite.Group()
         self.obstacles = pg.sprite.Group()
         self.list_obstacles = []
+
         self.player = Player(self)
         self.player.tiles.append(Body(self, *HEAD_COORD, (0, -1), "head"))
         for body in BODY_COORD:
             self.player.tiles.append(Body(self, *body, (0, -1)))
+
         Fruit(self, "standard")
+
+        while OBSTACLE_NUMBER > len(self.list_obstacles):
+            self.list_obstacles.append([randint(MIN_OBSTACLE, MAX_OBSTACLE)])
+            self.list_obstacles[len(self.list_obstacles) - 1].append(Obstacle(self))
+            for i in range(self.list_obstacles[-1:][0][0] - 1):
+                self.list_obstacles[len(self.list_obstacles) - 1].append(Obstacle(self, False))
+                
         self.run()
 
     #shows default menu: New game, Settings, Resources, Quit

@@ -8,6 +8,32 @@ from os import path
 
 vec = pg.math.Vector2
 
+#finds distance btw two points
+def distance(a, b):  #a, b - tuples
+    return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
+
+#finds the closest corner to the point
+def find_closest(x, y):
+    x0 = x // PLAYER_SIZE * PLAYER_SIZE
+    y0 = (y - OFFSET_Y) // PLAYER_SIZE * PLAYER_SIZE + OFFSET_Y
+    points = [(x0, y0), (x0 + PLAYER_SIZE, y0), (x0, y0 + PLAYER_SIZE), (x0 + PLAYER_SIZE, y0 + PLAYER_SIZE)]
+    min_d = 1000
+    point = (0, 0)
+    for p in points:
+        if distance((x, y), p) < min_d:
+            point = p
+            min_d = distance((x, y), p)
+    return point
+
+#move snake, so it is aligned with the grid
+def align_tiles(tiles):
+    disp = (0, 0)
+    for tile in tiles:
+        p = find_closest(tile.rect.left, tile.rect.top)
+        tile.rect.left = p[0]
+        tile.rect.top = p[1]
+    return tiles
+
 class Player():
 
     def __init__(self, game):
@@ -28,7 +54,7 @@ class Player():
         head = self.tiles[0]
         #check if at the center of the tile
         if self.check_if_center(head):
-            self.align_tiles()
+            align_tiles(self.tiles)
             #start at the end, because otherwise getting wrong direction if two consequent turns
             i = len(self.tiles) - 1
             while i > 0:
@@ -59,15 +85,16 @@ class Player():
 
     #checks if tiles are aligned with the grid
     def check_if_center(self, head):
-        A = self.find_closest(head.rect.left, head.rect.top)
+        A = find_closest(head.rect.left, head.rect.top)
         A_h = (head.rect.left, head.rect.top)
         at_center = False
-        if self.distance(A, A_h) < 0.1 or \
-          (self.distance(A, A_h) < SPEED and \
-           self.distance(A, A_h) > self.distance(A, A_h + 0.1 * SPEED * head.dir)):
+        if distance(A, A_h) < 0.1 or \
+          (distance(A, A_h) < SPEED and \
+           distance(A, A_h) > distance(A, A_h + 0.1 * SPEED * head.dir)):
                at_center = True
         return at_center
 
+    """
     #finds distance btw two points
     def distance(self, a, b):  #a, b - tuples
         return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
@@ -75,7 +102,7 @@ class Player():
     #finds the closest corner to the point
     def find_closest(self, x, y):
         x0 = x // PLAYER_SIZE * PLAYER_SIZE
-        y0 = y // PLAYER_SIZE * PLAYER_SIZE
+        y0 = (y - OFFSET_Y) // PLAYER_SIZE * PLAYER_SIZE + OFFSET_Y
         points = [(x0, y0), (x0 + PLAYER_SIZE, y0), (x0, y0 + PLAYER_SIZE), (x0 + PLAYER_SIZE, y0 + PLAYER_SIZE)]
         min_d = 1000
         point = (0, 0)
@@ -92,6 +119,7 @@ class Player():
             p = self.find_closest(tile.rect.left, tile.rect.top)
             tile.rect.left = p[0]
             tile.rect.top = p[1]
+    """
 
 
 class Body(pg.sprite.Sprite):
@@ -131,7 +159,7 @@ class Fruit(pg.sprite.Sprite):
     def spawn(self, tiles, type):
         board = []
         for i in range (0, WIDTH, PLAYER_SIZE):
-            for j in range (OFFSET, HEIGHT, PLAYER_SIZE):
+            for j in range (OFFSET_Y, HEIGHT, PLAYER_SIZE):
                 board.append([i, j])
 
         #where big fruit can't spawn
@@ -143,7 +171,7 @@ class Fruit(pg.sprite.Sprite):
         #remove body tiles
         for body_tile in tiles:
             x = body_tile.rect.left // PLAYER_SIZE * PLAYER_SIZE
-            y = body_tile.rect.top // PLAYER_SIZE * PLAYER_SIZE
+            y = (body_tile.rect.top - OFFSET_Y) // PLAYER_SIZE * PLAYER_SIZE + OFFSET_Y
             if type == "standard":
                 if [x, y] in board:
                     board.remove([x, y])
@@ -191,7 +219,7 @@ class Fruit(pg.sprite.Sprite):
             for i in range(0, WIDTH, PLAYER_SIZE):
                 if [i, HEIGHT - PLAYER_SIZE] in board:
                     board.remove([i, HEIGHT - PLAYER_SIZE])
-            for i in range(OFFSET, HEIGHT, PLAYER_SIZE):
+            for i in range(OFFSET_Y, HEIGHT, PLAYER_SIZE):
                 if [WIDTH - PLAYER_SIZE, i] in board:
                     board.remove([WIDTH - PLAYER_SIZE, i])
 
@@ -215,19 +243,23 @@ class Obstacle(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         (self.rect.left, self.rect.top) = self.select_tile(new)
 
+    #only when at the center
     def select_tile(self, new):
+        print(self.game.player.tiles)
+        align_tiles(self.game.player.tiles)
         board = []
         if new:
             for i in range (0, WIDTH, PLAYER_SIZE):
-                for j in range (OFFSET, HEIGHT, PLAYER_SIZE):
+                for j in range (OFFSET_Y, HEIGHT, PLAYER_SIZE):
                     board.append([i, j])
 
             #remove body tiles
             for body_tile in self.game.player.tiles:
                 x = body_tile.rect.left // PLAYER_SIZE * PLAYER_SIZE
-                y = body_tile.rect.top // PLAYER_SIZE * PLAYER_SIZE
+                y = (body_tile.rect.top - OFFSET_Y) // PLAYER_SIZE * PLAYER_SIZE + OFFSET_Y
                 if [x, y] in board:
                     board.remove([x, y])
+                    print(body_tile.rect.top, x, y)
 
             #remove obstacles
             for group in self.game.list_obstacles:
@@ -258,21 +290,43 @@ class Obstacle(pg.sprite.Sprite):
                 x = obs.rect.left
                 y = obs.rect.top
                 for d in directions:
+                    print(x + d[0], y + d[1])
                     if not [x + d[0], y + d[1]] in board and \
-                       not self.exist(x + d[0], y + d[1]) and \
-                       (x + d[0] >= 0 and x + d[0] <= WIDTH - PLAYER_SIZE and \
-                        y + d[1] >= OFFSET and y + d[1] <= HEIGHT - PLAYER_SIZE):
+                      (x + d[0] >= 0 and x + d[0] <= WIDTH - PLAYER_SIZE and \
+                       y + d[1] >= OFFSET_Y and y + d[1] <= HEIGHT - PLAYER_SIZE) and \
+                       not self.obstacle_exist(x + d[0], y + d[1]) and \
+                       not self.tile_exist(x + d[0], y + d[1]) and \
+                       not self.fruit_exist(x + d[0], y + d[1]):
                        board.append([x + d[0], y + d[1]])
-
+        print(board)
         tile = choice(board)
 
         return tile
 
-    def exist(self, x, y):
+    def obstacle_exist(self, x, y):
         exist = False
         for group in self.game.list_obstacles:
             for i in range(1, len(group)):
                 if group[i].rect.left == x and group[i].rect.top == y:
                     exist = True
-
         return exist
+
+    def tile_exist(self, x, y):
+        answer = False
+        for tile in self.game.player.tiles:
+            if tile.rect.left == x and tile.rect.top == y:
+                answer = True
+        return answer
+
+    def fruit_exist(self, x, y):
+        answer = False
+        fruit_area = [(0, 0), (PLAYER_SIZE, 0), (0, PLAYER_SIZE), (PLAYER_SIZE, PLAYER_SIZE)]
+        for fruit in self.game.fruits:
+            if fruit.type ==  "standard":
+                if fruit.rect.left == x and fruit.rect.top == y:
+                    answer = True
+            if fruit.type == "big":
+                for d in fruit_area:
+                    if fruit.rect.left + d[0] == x and fruit.rect.top + d[1]:
+                        answer = True
+        return answer

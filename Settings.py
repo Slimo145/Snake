@@ -1,7 +1,7 @@
 #game settings
-OFFSET = 45
-HEIGHT = 600 + OFFSET
+OFFSET_Y = 45
 WIDTH = 600
+HEIGHT = 600 + OFFSET_Y
 PLAYER_SIZE = 25
 TITLE = "Snake"
 FONT_NAME = 'arial'
@@ -17,14 +17,11 @@ MIN_OBSTACLE = 1
 MAX_OBSTACLE = 10
 
 #staring snake
-HEAD_COORD = (150, 175)
-BODY_COORD = [(150, 200),
-             (150, 225),
-             (150, 250),
-             (150, 275)]#,
-             #(50, 200),
-             #(50, 225),
-             #(50, 250)]
+HEAD_COORD = (150, 175 + OFFSET_Y)
+BODY_COORD = [(150, 200 + OFFSET_Y),
+             (150, 225 + OFFSET_Y),
+             (150, 250 + OFFSET_Y),
+             (150, 275 + OFFSET_Y)]
 
 #COLORS
 WHITE = (255, 255, 255)
