@@ -13,6 +13,7 @@ class Game:
         self.clock = pg.time.Clock()
         self.font_name = pg.font.match_font(FONT_NAME)
 
+    #main loop
     def run(self):
         #Game loop
         self.clock.tick(FPS)
@@ -23,17 +24,38 @@ class Game:
             self.update()
             self.draw()
 
+    #react on pressed key
+    def events(self):
+        #events game loop
+        turn_keys = [pg.K_UP, pg.K_DOWN, pg.K_RIGHT, pg.K_LEFT]
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                self.playing = False
+                self.quitgame()
+            if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
+                self.playing = False
+                self.show_menu()
+            if event.type == pg.KEYDOWN and event.key in turn_keys:
+                self.player.next_dir = self.select_next_direction(event.key, self.player.tiles[0].dir)
+
+    #update game loop
     def update(self):
         #update game loop
         self.player.update()
         self.all_sprites.update()
 
+        #check if dead
+        if self.player.tiles == []:
+            self.playing = False
+            self.show_menu()
+
         #check self collision
         i = 5
         #can hit only third tile [h, s, c, s, c, s, s...]
         while i < len(self.player.tiles) and self.playing:
-            if sqrt((self.player.tiles[0].rect.left - self.player.tiles[i].rect.left) ** 2 +
-                    (self.player.tiles[0].rect.top - self.player.tiles[i].rect.top) ** 2) < PLAYER_SIZE:
+            head = self.player.tiles[0].rect.center
+            tile = self.player.tiles[i].rect.center
+            if self.distance(head, tile) < PLAYER_SIZE:
                 self.playing = False
                 self.show_menu()
             else:
@@ -52,13 +74,20 @@ class Game:
         hits = pg.sprite.spritecollide(self.player.tiles[0], self.fruits, True)
         if hits:
             for hit in hits:
-                self.new_bodies += 1
                 if hit.type == "standard":
                     self.score += 1
+                    self.grow()
                     Fruit(self, "standard")
+                    if self.player.starve_time < pg.time.get_ticks() + TIME_TO_STARVE:
+                        self.player.starve_time = pg.time.get_ticks() + TIME_TO_STARVE
+                        self.player.last_food_type = "standard"
                 elif hit.type == "big":
                     self.score += 4
+                    self.grow()
+                    self.grow()
                     self.big_fruit_exist = False
+                    self.player.starve_time = pg.time.get_ticks() + 2 * TIME_TO_STARVE
+                    self.player.last_food_type = "big"
 
         #spawn big fruit
         if not self.big_fruit_exist:
@@ -67,24 +96,22 @@ class Game:
                 Fruit(self, "big")
                 self.big_fruit_exist = True
 
-        #grow Snake, when there is space to grow
-
-
-    def events(self):
-        #events game loop
-        turn_keys = [pg.K_UP, pg.K_DOWN, pg.K_RIGHT, pg.K_LEFT]
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                if self.playing:
-                    self.playing = False
-                self.quitgame()
-            if event.type == pg.KEYDOWN and event.key in turn_keys:
-                self.player.select_next_tile(event.key)
-
+    #draw all sprites, score
     def draw(self):
         self.screen.fill(BGCOLOR)
         self.all_sprites.draw(self.screen)
         self.draw_text('Score: ' + str(self.score), 22, WHITE, 40, 5)
+        if self.player.last_food_type == "standard":
+            pg.draw.rect(self.screen, RED, \
+                        (WIDTH / 2 - 100, 10, 200 * (self.player.starve_time - pg.time.get_ticks()) / TIME_TO_STARVE, 15))
+        elif self.player.last_food_type == "big":
+            pg.draw.rect(self.screen, RED, \
+                        (WIDTH / 2 - 100, 10, 200 * (self.player.starve_time - pg.time.get_ticks()) / 2 / TIME_TO_STARVE, 15))
+        pg.draw.rect(self.screen, GREY, (WIDTH / 2 - 100, 10, 200, 15) , 1)
+        if self.big_fruit_exist:
+            pg.draw.rect(self.screen, GREEN, \
+                         (WIDTH / 2 - 100, 35, 200 - 200 * (pg.time.get_ticks() - self.find_bf_time()) / BIG_FR_TIME, 15))
+            pg.draw.rect(self.screen, GREY, (WIDTH / 2 - 100, 35, 200, 15) , 1)
 
         """
         #draw grid
@@ -96,24 +123,26 @@ class Game:
 
         pg.display.flip()
 
+    #create new game
     def new(self):
+        self.dirname = path.dirname(__file__)
+        self.tile_image = pg.transform.scale(pg.image.load(path.join(self.dirname, "square.png")).convert(), (25, 25))
         self.score = 0
-        self.new_bodies = 0
         self.big_fruit_exist = False
         self.all_sprites = pg.sprite.LayeredUpdates()
-        self.bodies = pg.sprite.Group()
         self.fruits = pg.sprite.Group()
         self.player = Player(self)
-        self.player.tiles.append(Body(self, *HEAD_COORD, "head", (0, -1)))#, vec(0, -1) * SPEED)])
+        self.player.tiles.append(Body(self, *HEAD_COORD, (0, -1), "head"))
         for body in BODY_COORD:
-            self.player.tiles.append(Body(self, *body, "standard", (0, -1)))
+            self.player.tiles.append(Body(self, *body, (0, -1)))
         Fruit(self, "standard")
         self.run()
 
+    #shows default menu: New game, Settings, Resources, Quit
     def show_menu(self):
-    #    pg.mixer.music.load(path.join(self.snd_dir, 'Of Monsters And Men - Little Talks.ogg'))
-    #    pg.mixer.music.set_volume(0.3)
-    #    pg.mixer.music.play(loops=-1)
+        #pg.mixer.music.load(path.join(self.snd_dir, 'Of Monsters And Men - Little Talks.ogg'))
+        #pg.mixer.music.set_volume(0.3)
+        #pg.mixer.music.play(loops=-1)
         self.screen.fill(BGCOLOR)
         self.draw_text(TITLE, 48, WHITE, WIDTH / 2, HEIGHT / 6)
         self.waiting = True
@@ -124,7 +153,7 @@ class Game:
                 if event.type == pg.QUIT:
                     self.waiting = False
                     self.quitgame()
-                if event.type == pg.KEYUP:
+                if event.type == pg.KEYUP and event.key != pg.K_ESCAPE:
                     self.waiting = False
                     self.new()
 
@@ -139,6 +168,7 @@ class Game:
         pg.quit()
         quit()
 
+    #draws text
     def draw_text(self, text, size, color, x, y):
         #draw text on the screen
         font = pg.font.Font(self.font_name, size)
@@ -147,6 +177,7 @@ class Game:
         text_rect.midtop = (x, y)
         self.screen.blit(text_surface, text_rect)
 
+    #creates button
     def button(self, text, size, x, y, w, h, ic, ac, tic, tac, action = None):
         #x,y=midtop, ic/ac=inactive/active color
         mouse = pg.mouse.get_pos()
@@ -161,6 +192,42 @@ class Game:
         else:
             pg.draw.rect(self.screen, ic, (x - w/2, y, w, h))
             self.draw_text(text, size, tic, x, y)
+
+    #finds time when big fruit was created
+    def find_bf_time(self):
+        for f in self.fruits:
+            if f.type == "big":
+                return f.create_time
+
+    #checks if tile is in the body
+    def exist(self, x, y):
+        answer = False
+        for tile in self.player.tiles:
+            if tile.rect.left == x and tile.rect.top == y:
+                answer = True
+        return answer
+
+    #return next direction based on pressed key
+    def select_next_direction(self, key, h_dir):
+        result_dir = h_dir
+        turn_keys = [pg.K_UP, pg.K_DOWN, pg.K_RIGHT, pg.K_LEFT]
+        directions = [(0, -1), (0, 1), (1, 0), (-1, 0)]
+        for i in range(len(turn_keys)):
+            if key == turn_keys[i] and h_dir * -1 != vec(directions[i]):
+                result_dir = vec(directions[i])
+        return result_dir
+
+    #returns distance btw two points
+    def distance(self, a, b):
+        return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
+
+    #add a tile
+    def grow(self):
+        last = self.player.tiles[-1:][0]
+        x = last.rect.left
+        y = last.rect.top
+        self.player.floating.append(Body(self, x,  y, last.dir))
+
 
 
 g = Game()
